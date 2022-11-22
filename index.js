@@ -38,6 +38,7 @@ async function run() {
         const usersCollection = client.db('doctors-portal').collection('users');
         const appointmentOptionCollection = client.db('doctors-portal').collection('appointmentOptions');
         const bookingsCollection = client.db('doctors-portal').collection('bookings');
+        const doctorsCollection = client.db('doctors-portal').collection('doctors');
 
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
@@ -209,6 +210,33 @@ async function run() {
 
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
+        })
+
+        app.get('/doctors', verifyJWT, async (req, res) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            const doctors = await doctorsCollection.find({}).toArray();
+            res.send(doctors);
+        })
+
+        app.post('/doctors', verifyJWT, async (req, res) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            const doctor = req.body;
+            const result = await doctorsCollection.insertOne(doctor);
+            res.send(result)
         })
     }
     finally {
