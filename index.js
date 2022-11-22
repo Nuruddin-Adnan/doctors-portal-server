@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
@@ -78,6 +78,34 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === 'admin' });
+        })
+
+        app.put('/users/admin/:id', verifyJWT, async (req, res) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+
         app.get('/appointmentOptions', async (req, res) => {
 
             const date = req.query.date;
@@ -142,6 +170,12 @@ async function run() {
                 }
             ]).toArray();
             res.send(options);
+        })
+
+        app.get('/appointmentSpeciality', async (req, res) => {
+            const query = {};
+            const result = await appointmentOptionCollection.find(query).project({ name: 1 }).toArray();
+            res.send(result);
         })
 
         app.get('/bookings', verifyJWT, async (req, res) => {
