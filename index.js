@@ -125,6 +125,19 @@ async function run() {
             res.send(result);
         })
 
+        // temporary update 
+        app.get('/appointmentOptions/update', async (req, res) => {
+            const filter = {}
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    price: 99
+                }
+            }
+            const result = await appointmentOptionCollection.updateMany(filter, updatedDoc, options);
+            res.send(result)
+        })
+
         app.get('/appointmentOptions', async (req, res) => {
 
             const date = req.query.date;
@@ -169,6 +182,7 @@ async function run() {
                 {
                     $project: {
                         name: 1,
+                        price: 1,
                         slots: 1,
                         booked: {
                             $map: {
@@ -182,6 +196,7 @@ async function run() {
                 {
                     $project: {
                         name: 1,
+                        price: 1,
                         slots: {
                             $setDifference: ['$slots', '$booked']
                         }
@@ -208,6 +223,13 @@ async function run() {
             const query = { email: email };
             const bookings = await bookingsCollection.find(query).toArray();
             res.send(bookings);
+        })
+
+        app.get('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const booking = await bookingsCollection.findOne(query);
+            res.send(booking)
         })
 
         app.post('/bookings', async (req, res) => {
