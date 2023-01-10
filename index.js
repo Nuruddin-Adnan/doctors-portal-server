@@ -41,6 +41,7 @@ async function run() {
         const appointmentOptionCollection = client.db('doctors-portal').collection('appointmentOptions');
         const bookingsCollection = client.db('doctors-portal').collection('bookings');
         const doctorsCollection = client.db('doctors-portal').collection('doctors');
+        const paymentsCollection = client.db('doctors-portal').collection('payments');
 
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
@@ -128,17 +129,17 @@ async function run() {
         })
 
         // temporary update 
-        app.get('/appointmentOptions/update', async (req, res) => {
-            const filter = {}
-            const options = { upsert: true }
-            const updatedDoc = {
-                $set: {
-                    price: 99
-                }
-            }
-            const result = await appointmentOptionCollection.updateMany(filter, updatedDoc, options);
-            res.send(result)
-        })
+        // app.get('/appointmentOptions/update', async (req, res) => {
+        //     const filter = {}
+        //     const options = { upsert: true }
+        //     const updatedDoc = {
+        //         $set: {
+        //             price: 99
+        //         }
+        //     }
+        //     const result = await appointmentOptionCollection.updateMany(filter, updatedDoc, options);
+        //     res.send(result)
+        // })
 
         app.get('/appointmentOptions', async (req, res) => {
 
@@ -269,6 +270,25 @@ async function run() {
             res.send({
                 clientSecret: paymentIntent.client_secret
             })
+        })
+
+        // insert payment and update bookig after completig the payment
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+
+            // update payment info on bookingsCollection
+            const id = payment.bookingId;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const updateResult = bookingsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result)
         })
 
         app.get('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
